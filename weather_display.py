@@ -1,10 +1,60 @@
 import time
 import urequests
-from machine import Pin, I2C
+from machine import Pin, I2C, PWM
 import ssd1306
 import lcd1602
 import network
 import socket
+
+
+def play_buzzer_if_weather(buzzer_info):
+    buzzer = PWM(Pin(16))
+    buzzer.freq(1000)
+        # Define the weather conditions
+    Thunderstorm = {
+        "thunderstorm with light rain",
+        "thunderstorm with rain",
+        "thunderstorm with heavy rain",
+        "light thunderstorm",
+        "thunderstorm",
+        "heavy thunderstorm",
+        "ragged thunderstorm",
+        "thunderstorm with light drizzle",
+        "thunderstorm with drizzle",
+        "thunderstorm with heavy drizzle"
+    }
+
+    Drizzle = {
+        "light intensity drizzle",
+        "drizzle",
+        "heavy intensity drizzle",
+        "light intensity drizzle rain",
+        "drizzle rain",
+        "heavy intensity drizzle rain",
+        "shower rain and drizzle",
+        "heavy shower rain and drizzle",
+        "shower drizzle"
+    }
+
+    Rain = {
+        "light rain",
+        "moderate rain",
+        "heavy intensity rain",
+        "very heavy rain",
+        "extreme rain",
+        "freezing rain",
+        "light intensity shower rain",
+        "shower rain",
+        "heavy intensity shower rain",
+        "ragged shower rain"
+    }
+    buzzer_info = buzzer_info.lower()
+    
+    # Check if the weather description is in any of the weather condition sets
+    if buzzer_info in Thunderstorm or buzzer_info in Drizzle or buzzer_info in Rain:
+        buzzer.duty_u16(32768)
+        time.sleep(1)
+        buzzer.duty_u16(0)
 
 def read_url_from_response(response_text):
     try:
@@ -43,7 +93,7 @@ def print_weather(weather_data):
     print(f'City: {weather_data["name"]}')
     print(f'Coordinates: [{weather_data["coord"]["lon"]}, {weather_data["coord"]["lat"]}]')
     print(f'Visibility: {weather_data["visibility"]}m')
-    print(f'Weather: {weather_data["weather"][0]["description"]}'.upper)
+    print(f'Weather: {weather_data["weather"][0]["description"]}')
     print(f'Temperature: {weather_data["main"]["temp"]}°C')
     print(f'Feels Like: {weather_data["main"]["feels_like"]}°C')
     print(f'Minimum Temperature: {weather_data["main"]["temp_min"]}°C')
@@ -85,7 +135,6 @@ def turn_on_single_led(led_number):
         led_pins[led_number].value(1)
 
 def main():
-    
 
     # Initialize LCD
     lcd = lcd1602.LCD()  # Replace with your LCD initialization
@@ -93,11 +142,29 @@ def main():
     # Initialize OLED
     i2c = I2C(1, sda=Pin(2), scl=Pin(3), freq=400000)
     oled = ssd1306.SSD1306_I2C(128, 64, i2c)
+    lcd.message("Welcome to Pi \nWeather Tracker")
+    time.sleep(3.5)
+    lcd.clear()
+    lcd.message("Loading...")
+    
+    from rain import run_rain_simulation
+    run_rain_simulation()
+    import sunny
+    sunny.animate_sun()
+    # main.py
+
+    from snow import run_snow_animation
+
+    # Run the snow animation function
+    run_snow_animation()
+    
+    del run_rain_simulation
+    del sunny
+    del run_snow_animation
 
     def display_weather_lcd(weather_data):
         
-        lcd.message("Welcome to \nPi Weather Tracker")
-        time.sleep(3.5)
+       
         for i in range(3):
             lcd.clear()
             lcd.message("City: " + weather_data["name"])
@@ -128,6 +195,7 @@ def main():
             aqi_level = aqi_levels[aqi - 1]
             lcd.message(f"AQI: {aqi_level}")
             time.sleep(3.5)  # Display for 3 seconds
+            lcd.clear()
 
         
 
@@ -136,8 +204,8 @@ def main():
         if weather_data:
             oled.text(f"City: {weather_data['name']}", 0, 0)
             oled.text(f"Temp: {weather_data['main']['temp']}C", 0, 10)
-            oled.text(f"Weather: {weather_data['weather'][0]['description']}", 0, 20)
-            oled.text(f"Wind: {weather_data['wind']['speed']} m/s", 0, 30)
+            oled.text("Weather:", 0 , 20)
+            oled.text(f"{weather_data['weather'][0]['description']}", 0, 30)
             oled.text(f"Humidity: {weather_data['main']['humidity']}%", 0, 40)
         else:
             oled.text("Weather data unavailable", 0, 0)
@@ -172,10 +240,12 @@ def main():
             if weather_data:
                 lat = weather_data["coord"]["lat"]
                 lon = weather_data["coord"]["lon"]
+                buzzer_info = weather_data['weather'][0]['description']
                 air_pollution_data = get_air_pollution(lat, lon, api_key)
                 print_weather(weather_data)
                 print_air_pollution(air_pollution_data)
                 display_weather_oled(weather_data, air_pollution_data)
+                play_buzzer_if_weather(buzzer_info)
                 display_weather_lcd(weather_data)
             else:
                 print("Failed to get weather data")
@@ -187,9 +257,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
