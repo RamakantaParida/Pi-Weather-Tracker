@@ -24,7 +24,7 @@ def send_message():
     password = password_entry.get()
     
     if ssid and password:  # Manual mode
-        message = f"SSID: {ssid}, Password: {password}"
+        message = f"SSID:{ssid}, Password:{password}$"
         send_to_port(port, message)
     else:
         tkMessageBox.showwarning("Incomplete Input", "Please enter both SSID and password.")
@@ -48,7 +48,7 @@ def send_reset():
     """ Sends a reset message to the selected serial port. """
     port = selected_port.get()
     if port:
-        message = "reset"
+        message = "#reset#"
         send_to_port(port, message)
     else:
         status_label.configure(text="Please select a serial port", text_color="red")
